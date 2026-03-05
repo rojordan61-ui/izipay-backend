@@ -19,7 +19,6 @@ try {
 } catch(e) { console.error('Error Firebase:', e.message); }
 const db = admin.apps.length ? admin.firestore() : null;
 
-// Credenciales Izipay
 const IZIPAY_USER = process.env.IZIPAY_USER || '60189488';
 const IZIPAY_PASSWORD = process.env.IZIPAY_PASSWORD;
 const IZIPAY_API = 'https://api.micuentaweb.pe';
@@ -48,12 +47,13 @@ app.post('/crear-orden', async (req, res) => {
     };
     const authStr = Buffer.from(IZIPAY_USER + ':' + IZIPAY_PASSWORD).toString('base64');
     console.log('Creando orden:', orderId, 'plan:', plan, 'monto:', precio);
+    console.log('User:', IZIPAY_USER, 'Password definida:', !!IZIPAY_PASSWORD);
     const response = await axios.post(
       IZIPAY_API + '/api-payment/V4/Charge/CreatePayment',
       payload,
       { headers: { 'Authorization': 'Basic ' + authStr, 'Content-Type': 'application/json' } }
     );
-    console.log('Respuesta Izipay status:', response.data.status);
+    console.log('Respuesta Izipay:', JSON.stringify(response.data).substring(0, 300));
     const formToken = response.data.answer && response.data.answer.formToken;
     if (!formToken) return res.status(500).json({ error: 'No se obtuvo formToken', detail: response.data });
     if (db) {
@@ -64,8 +64,8 @@ app.post('/crear-orden', async (req, res) => {
     }
     res.json({ formToken, publicKey: IZIPAY_PUBLIC_KEY, orderId, coins, plan });
   } catch (error) {
-    const errData = error.response && error.response.data;
-    console.error('Error creando orden:', JSON.stringify(errData) || error.message);
+    const errData = error.response ? error.response.data : error.message;
+    console.error('ERROR IZIPAY DETALLE:', JSON.stringify(errData));
     res.status(500).json({ error: 'Error al crear orden', detail: errData });
   }
 });
